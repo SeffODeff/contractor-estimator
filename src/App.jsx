@@ -47,7 +47,7 @@ const RemodelingEstimator = () => {
   const [uploadedPlans, setUploadedPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   
-  // Mock API Services (in a real app, these would be actual API clients)
+  // Mock API Services
   const abcSupplyApi = useRef(null);
   const beaconRoofingApi = useRef(null);
 
@@ -86,12 +86,9 @@ const RemodelingEstimator = () => {
     }));
     
     try {
-      // In a real implementation, we would initialize the actual API client
-      // For demo purposes, we'll simulate the API connection
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       abcSupplyApi.current = {
-        // Mock implementation of the API client
         searchMaterials: async (query, category) => {
           await new Promise(resolve => setTimeout(resolve, 800));
           
@@ -129,8 +126,7 @@ const RemodelingEstimator = () => {
           const inventory = {};
           
           skus.forEach(sku => {
-            // Random inventory data
-            const available = Math.random() > 0.2; // 20% chance of being out of stock
+            const available = Math.random() > 0.2;
             const quantity = available ? Math.floor(Math.random() * 100) + 1 : 0;
             
             inventory[sku] = {
@@ -177,12 +173,9 @@ const RemodelingEstimator = () => {
     }));
     
     try {
-      // In a real implementation, we would initialize the actual API client
-      // For demo purposes, we'll simulate the API connection
-      await new Promise(resolve => setTimeout(resolve, 1800)); // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1800));
       
       beaconRoofingApi.current = {
-        // Mock implementation of the API client
         searchProducts: async (query, category) => {
           await new Promise(resolve => setTimeout(resolve, 600));
           
@@ -260,10 +253,8 @@ const RemodelingEstimator = () => {
         if (material.sku && liveInventoryData[material.sku]) {
           const inventoryData = liveInventoryData[material.sku];
           
-          // Get most relevant location's quantity
           let quantityAvailable = 0;
           if (inventoryData.locations && inventoryData.locations.length > 0) {
-            // Sort by distance and take the first one
             const sortedLocations = [...inventoryData.locations].sort((a, b) => a.distance - b.distance);
             quantityAvailable = sortedLocations[0].quantity;
           }
@@ -294,12 +285,10 @@ const RemodelingEstimator = () => {
       
       const inventoryData = { ...liveInventoryData };
       
-      // Check ABC Supply inventory if connected and there are items
       if (supplierApiStatus.abcSupply.connected && abcSupplyItems.length > 0 && abcSupplyApi.current) {
         const abcSkus = abcSupplyItems.map(item => item.sku);
         const abcInventory = await abcSupplyApi.current.checkInventory(abcSkus, liveLocationInfo.zipCode);
         
-        // Merge inventory data
         Object.keys(abcInventory).forEach(sku => {
           inventoryData[sku] = {
             ...abcInventory[sku],
@@ -308,12 +297,10 @@ const RemodelingEstimator = () => {
         });
       }
       
-      // Check Beacon Roofing inventory if connected and there are items
       if (supplierApiStatus.beaconRoofing.connected && beaconItems.length > 0 && beaconRoofingApi.current) {
         const beaconSkus = beaconItems.map(item => item.sku);
         const beaconInventory = await beaconRoofingApi.current.checkAvailability(beaconSkus, liveLocationInfo.zipCode);
         
-        // Merge inventory data
         Object.keys(beaconInventory).forEach(sku => {
           inventoryData[sku] = {
             available: beaconInventory[sku].status === "Available",
@@ -331,7 +318,6 @@ const RemodelingEstimator = () => {
       
       setLiveInventoryData(inventoryData);
       
-      // Combine all locations from all suppliers for the location selector
       const allLocations = new Set();
       
       Object.values(inventoryData).forEach(item => {
@@ -363,9 +349,7 @@ const RemodelingEstimator = () => {
       setIsLoadingMaterials(true);
       
       try {
-        // In a real app, this would fetch from an API
-        // For this demo, use mock data
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const abcSupplyMaterials = [
           { id: 1, name: '1/2" Drywall', unit: 'sheet', price: 12.58, sku: 'ABC-DW-12', supplier: 'ABC Supply', category: 'Drywall' },
@@ -472,7 +456,6 @@ const RemodelingEstimator = () => {
 
   // Auto-calculate materials based on room dimensions
   const autoCalculate = () => {
-    // Find drywall and flooring materials
     const drywallIndex = materials.findIndex(m => m.name.toLowerCase().includes('drywall'));
     const flooringIndex = materials.findIndex(m => m.name.toLowerCase().includes('flooring'));
     const paintIndex = materials.findIndex(m => m.name.toLowerCase().includes('paint'));
@@ -480,25 +463,21 @@ const RemodelingEstimator = () => {
     if (drywallIndex >= 0 || flooringIndex >= 0 || paintIndex >= 0) {
       const updatedMaterials = [...materials];
       
-      // Calculate total room areas
       const totalFloorArea = rooms.reduce((sum, room) => sum + calculateRoomArea(room), 0);
       const totalWallArea = rooms.reduce((sum, room) => sum + calculateWallArea(room), 0);
       
-      // Update drywall quantity based on wall area
       if (drywallIndex >= 0) {
         updatedMaterials[drywallIndex].quantity = totalWallArea;
         updatedMaterials[drywallIndex].total = 
           updatedMaterials[drywallIndex].quantity * updatedMaterials[drywallIndex].unitCost;
       }
       
-      // Update flooring quantity based on floor area
       if (flooringIndex >= 0) {
         updatedMaterials[flooringIndex].quantity = totalFloorArea;
         updatedMaterials[flooringIndex].total = 
           updatedMaterials[flooringIndex].quantity * updatedMaterials[flooringIndex].unitCost;
       }
       
-      // Update paint quantity based on wall area (1 gallon covers ~400 sqft)
       if (paintIndex >= 0) {
         updatedMaterials[paintIndex].quantity = Math.ceil(totalWallArea / 400);
         updatedMaterials[paintIndex].total = 
@@ -517,7 +496,7 @@ const RemodelingEstimator = () => {
       materialTotal,
       laborTotal,
       subtotal: materialTotal + laborTotal,
-      tax: (materialTotal + laborTotal) * 0.08, // Assuming 8% tax
+      tax: (materialTotal + laborTotal) * 0.08,
       total: (materialTotal + laborTotal) * 1.08
     };
   };
@@ -528,7 +507,7 @@ const RemodelingEstimator = () => {
     connectToBeaconRoofing();
   }, [connectToAbcSupply, connectToBeaconRoofing]);
   
-  // Filter materials database by supplier and search term
+  // Filter materials database
   const filteredMaterials = materialDatabase.filter(item => {
     return (selectedSupplier === 'All' || item.supplier === selectedSupplier) && 
            (searchTerm === '' || 
@@ -537,12 +516,38 @@ const RemodelingEstimator = () => {
             item.category.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  // Calculate grand totals
   const totals = calculateTotals();
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Remodeling Takeoff & Estimating</h1>
+      
+      {/* Project Info */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Project Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Project Name</label>
+            <input
+              type="text"
+              className="w-full p-2 border rounded"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="e.g., Kitchen Remodel"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Client Name</label>
+            <input
+              type="text"
+              className="w-full p-2 border rounded"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="e.g., John Smith"
+            />
+          </div>
+        </div>
+      </div>
       
       {/* Plan Upload Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -551,7 +556,7 @@ const RemodelingEstimator = () => {
           <div className="w-full md:w-1/3">
             <div 
               className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50"
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => fileInputRef.current?.click()}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -593,72 +598,529 @@ const RemodelingEstimator = () => {
           
           <div className="w-full md:w-2/3 bg-gray-100 rounded-lg flex items-center justify-center min-h-64">
             {selectedPlan ? (
-              <div className="w-full p-4">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="font-medium">Preview: {selectedPlan.name}</div>
-                  <div className="text-sm text-gray-600">{(selectedPlan.size / 1024 / 1024).toFixed(2)} MB</div>
+              selectedPlan.type.includes('image') ? (
+                <img 
+                  src={selectedPlan.url} 
+                  alt={selectedPlan.name} 
+                  className="max-w-full max-h-64 object-contain"
+                />
+              ) : (
+                <div className="text-center p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="mt-2">{selectedPlan.name}</p>
+                  <p className="text-sm text-gray-500 mt-1">PDF preview not available in this view</p>
                 </div>
-
-                <div className="w-full h-96 bg-white rounded overflow-hidden flex items-center justify-center">
-                  {selectedPlan.type === 'application/pdf' ? (
-                    <iframe
-                      title={selectedPlan.name}
-                      src={selectedPlan.url}
-                      className="w-full h-full"
-                    />
-                  ) : (
-                    <img
-                      src={selectedPlan.url}
-                      alt={selectedPlan.name}
-                      className="object-contain w-full h-full"
-                    />
-                  )}
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  <button
-                    className="px-3 py-1 bg-red-500 text-white rounded"
-                    onClick={() => {
-                      setUploadedPlans(uploadedPlans.filter(p => p.id !== selectedPlan.id));
-                      setSelectedPlan(null);
-                    }}
-                  >
-                    Remove
-                  </button>
-
-                  <button
-                    className="px-3 py-1 bg-gray-200 rounded"
-                    onClick={() => window.open(selectedPlan.url, '_blank')}
-                  >
-                    Open
-                  </button>
-                </div>
-              </div>
+              )
             ) : (
-              <div className="text-center text-gray-500">No plan selected</div>
+              <p className="text-gray-500 italic">No plan selected. Upload a plan to view it here.</p>
             )}
           </div>
-
         </div>
+      </div>
 
-        <div className="mt-6 bg-white p-4 rounded shadow">
-          <h3 className="font-semibold mb-2">Estimate Summary</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-gray-600">Materials:</div>
-            <div className="text-right font-medium">${totals.materialTotal.toFixed(2)}</div>
-            <div className="text-gray-600">Labor:</div>
-            <div className="text-right font-medium">${totals.laborTotal.toFixed(2)}</div>
-            <div className="text-gray-600">Tax (8%):</div>
-            <div className="text-right">${totals.tax.toFixed(2)}</div>
-            <div className="text-gray-600">Total:</div>
-            <div className="text-right font-bold">${totals.total.toFixed(2)}</div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={autoCalculate}>Auto Calculate</button>
-            <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={updateWithLiveData}>Update with Live Data</button>
+      {/* Room Dimensions */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Room Dimensions</h2>
+          <div className="flex gap-2">
+            <button 
+              className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+              onClick={addRoom}
+            >
+              Add Room
+            </button>
+            <button 
+              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+              onClick={autoCalculate}
+            >
+              Auto-Calculate Materials
+            </button>
           </div>
         </div>
-
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 text-left">Room Name</th>
+                <th className="p-2 text-left">Length (ft)</th>
+                <th className="p-2 text-left">Width (ft)</th>
+                <th className="p-2 text-left">Height (ft)</th>
+                <th className="p-2 text-left">Floor Area (sqft)</th>
+                <th className="p-2 text-left">Wall Area (sqft)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rooms.map(room => (
+                <tr key={room.id} className="border-b">
+                  <td className="p-2">
+                    <input 
+                      type="text"
+                      className="w-full p-1 border rounded"
+                      value={room.name}
+                      onChange={(e) => updateRoom(room.id, 'name', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.5"
+                      className="w-full p-1 border rounded"
+                      value={room.length || ''}
+                      onChange={(e) => updateRoom(room.id, 'length', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.5"
+                      className="w-full p-1 border rounded"
+                      value={room.width || ''}
+                      onChange={(e) => updateRoom(room.id, 'width', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.5"
+                      className="w-full p-1 border rounded"
+                      value={room.height || ''}
+                      onChange={(e) => updateRoom(room.id, 'height', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    {calculateRoomArea(room).toFixed(2)}
+                  </td>
+                  <td className="p-2">
+                    {calculateWallArea(room).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* API Connections */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Supplier API Connections</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border rounded p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">ABC Supply</h3>
+              <div className="flex items-center">
+                <span className={`w-3 h-3 rounded-full mr-2 ${supplierApiStatus.abcSupply.connected ? 'bg-green-500' : supplierApiStatus.abcSupply.loading ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+                <span className="text-sm">
+                  {supplierApiStatus.abcSupply.connected ? 'Connected' : 
+                   supplierApiStatus.abcSupply.loading ? 'Connecting...' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+            <div className="text-sm mb-3">
+              {supplierApiStatus.abcSupply.connected ? 
+                'Successfully connected to ABC Supply API. You can now access real-time pricing and inventory.' : 
+                'Connection to ABC Supply API provides access to real-time pricing, inventory, and ordering.'}
+            </div>
+            <button 
+              className={`px-3 py-1 rounded text-white ${
+                supplierApiStatus.abcSupply.connected ? 'bg-gray-500' : 
+                supplierApiStatus.abcSupply.loading ? 'bg-yellow-500' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+              onClick={connectToAbcSupply}
+              disabled={supplierApiStatus.abcSupply.connected || supplierApiStatus.abcSupply.loading}
+            >
+              {supplierApiStatus.abcSupply.connected ? 'Connected' : 
+               supplierApiStatus.abcSupply.loading ? 'Connecting...' : 'Connect'}
+            </button>
+          </div>
+          
+          <div className="border rounded p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">Beacon Roofing Supply</h3>
+              <div className="flex items-center">
+                <span className={`w-3 h-3 rounded-full mr-2 ${supplierApiStatus.beaconRoofing.connected ? 'bg-green-500' : supplierApiStatus.beaconRoofing.loading ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+                <span className="text-sm">
+                  {supplierApiStatus.beaconRoofing.connected ? 'Connected' : 
+                   supplierApiStatus.beaconRoofing.loading ? 'Connecting...' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+            <div className="text-sm mb-3">
+              {supplierApiStatus.beaconRoofing.connected ? 
+                'Successfully connected to Beacon Roofing API.' : 
+                'Connection provides access to roofing materials, pricing, and stock levels.'}
+            </div>
+            <button 
+              className={`px-3 py-1 rounded text-white ${
+                supplierApiStatus.beaconRoofing.connected ? 'bg-gray-500' : 
+                supplierApiStatus.beaconRoofing.loading ? 'bg-yellow-500' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+              onClick={connectToBeaconRoofing}
+              disabled={supplierApiStatus.beaconRoofing.connected || supplierApiStatus.beaconRoofing.loading}
+            >
+              {supplierApiStatus.beaconRoofing.connected ? 'Connected' : 
+               supplierApiStatus.beaconRoofing.loading ? 'Connecting...' : 'Connect'}
+            </button>
+          </div>
+        </div>
+        
+        {(supplierApiStatus.abcSupply.connected || supplierApiStatus.beaconRoofing.connected) && (
+          <div className="mt-4 border-t pt-4">
+            <h3 className="font-medium mb-2">Check Live Inventory</h3>
+            <div className="flex flex-col md:flex-row gap-3 mb-3">
+              <div className="flex-grow">
+                <label className="block text-sm mb-1">ZIP Code</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter ZIP code"
+                  value={liveLocationInfo.zipCode}
+                  onChange={(e) => setLiveLocationInfo(prev => ({ ...prev, zipCode: e.target.value }))}
+                />
+              </div>
+              <div className="md:self-end">
+                <button
+                  className={`px-4 py-2 rounded text-white ${
+                    isCheckingInventory ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
+                  }`}
+                  onClick={checkInventory}
+                  disabled={isCheckingInventory || !liveLocationInfo.zipCode}
+                >
+                  {isCheckingInventory ? 'Checking...' : 'Check Inventory'}
+                </button>
+              </div>
+              {Object.keys(liveInventoryData).length > 0 && (
+                <div className="md:self-end">
+                  <button
+                    className="px-4 py-2 rounded text-white bg-blue-500 hover:bg-blue-600"
+                    onClick={updateWithLiveData}
+                  >
+                    Update Materials
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {Object.keys(liveInventoryData).length > 0 && (
+              <div className="mt-2">
+                <h4 className="text-sm font-medium mb-2">Inventory Results:</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="p-2 text-left">SKU</th>
+                        <th className="p-2 text-left">Status</th>
+                        <th className="p-2 text-left">Quantity</th>
+                        <th className="p-2 text-left">Nearest Location</th>
+                        <th className="p-2 text-left">Distance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(liveInventoryData).map(([sku, data]) => {
+                        const nearestLocation = data.locations.length > 0 
+                          ? [...data.locations].sort((a, b) => a.distance - b.distance)[0]
+                          : null;
+                          
+                        return (
+                          <tr key={sku} className="border-b">
+                            <td className="p-2">{sku}</td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded text-xs text-white ${data.available ? 'bg-green-500' : 'bg-red-500'}`}>
+                                {data.available ? 'In Stock' : 'Out'}
+                              </span>
+                            </td>
+                            <td className="p-2">{data.quantity}</td>
+                            <td className="p-2">{nearestLocation?.name || 'N/A'}</td>
+                            <td className="p-2">{nearestLocation ? `${nearestLocation.distance} mi` : 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Materials */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Project Materials</h2>
+          <button 
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            onClick={addMaterial}
+          >
+            Add Custom Material
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 text-left">Material</th>
+                <th className="p-2 text-left">Unit</th>
+                <th className="p-2 text-left">Cost ($)</th>
+                <th className="p-2 text-left">Qty</th>
+                <th className="p-2 text-left">Total ($)</th>
+                <th className="p-2 text-left">Supplier</th>
+                <th className="p-2 text-left">SKU</th>
+                <th className="p-2 text-left">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {materials.map(material => (
+                <tr key={material.id} className="border-b">
+                  <td className="p-2">
+                    <input 
+                      type="text"
+                      className="w-full p-1 border rounded"
+                      value={material.name}
+                      onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <select
+                      className="w-full p-1 border rounded text-sm"
+                      value={material.unit}
+                      onChange={(e) => updateMaterial(material.id, 'unit', e.target.value)}
+                    >
+                      <option value="sqft">sqft</option>
+                      <option value="sheet">sheet</option>
+                      <option value="gallon">gal</option>
+                      <option value="each">each</option>
+                      <option value="linear ft">lf</option>
+                      <option value="bundle">bndl</option>
+                      <option value="roll">roll</option>
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.01"
+                      className="w-20 p-1 border rounded"
+                      value={material.unitCost || ''}
+                      onChange={(e) => updateMaterial(material.id, 'unitCost', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.01"
+                      className="w-20 p-1 border rounded"
+                      value={material.quantity || ''}
+                      onChange={(e) => updateMaterial(material.id, 'quantity', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2 font-medium">
+                    ${material.total.toFixed(2)}
+                  </td>
+                  <td className="p-2">
+                    <select
+                      className="w-full p-1 border rounded text-sm"
+                      value={material.supplier || 'ABC Supply'}
+                      onChange={(e) => updateMaterial(material.id, 'supplier', e.target.value)}
+                    >
+                      <option value="ABC Supply">ABC</option>
+                      <option value="Beacon Roofing">Beacon</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="text"
+                      className="w-24 p-1 border rounded text-sm"
+                      value={material.sku || ''}
+                      onChange={(e) => updateMaterial(material.id, 'sku', e.target.value)}
+                      placeholder="SKU"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    {material.sku && liveInventoryData[material.sku] ? (
+                      liveInventoryData[material.sku].available ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                          ✗
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Materials Catalog */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Material Catalog</h2>
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex-grow">
+            <input
+              type="text"
+              placeholder="Search materials..."
+              className="w-full p-2 border rounded"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div>
+            <select
+              className="w-full p-2 border rounded"
+              value={selectedSupplier}
+              onChange={(e) => setSelectedSupplier(e.target.value)}
+            >
+              <option value="All">All Suppliers</option>
+              <option value="ABC Supply">ABC Supply</option>
+              <option value="Beacon Roofing">Beacon Roofing</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto max-h-64">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">SKU</th>
+                <th className="p-2 text-left">Material</th>
+                <th className="p-2 text-left">Unit</th>
+                <th className="p-2 text-left">Price</th>
+                <th className="p-2 text-left">Supplier</th>
+                <th className="p-2 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoadingMaterials ? (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center">Loading...</td>
+                </tr>
+              ) : filteredMaterials.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center">No materials found</td>
+                </tr>
+              ) : (
+                filteredMaterials.map(item => (
+                  <tr key={item.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{item.sku}</td>
+                    <td className="p-2">{item.name}</td>
+                    <td className="p-2">{item.unit}</td>
+                    <td className="p-2">${item.price.toFixed(2)}</td>
+                    <td className="p-2">{item.supplier}</td>
+                    <td className="p-2">
+                      <button
+                        className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                        onClick={() => addMaterialFromDatabase(item)}
+                      >
+                        Add
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Labor */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Labor</h2>
+          <button 
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            onClick={addLabor}
+          >
+            Add Labor
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">Hours</th>
+                <th className="p-2 text-left">Rate ($/hr)</th>
+                <th className="p-2 text-left">Total ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {labor.map(item => (
+                <tr key={item.id} className="border-b">
+                  <td className="p-2">
+                    <input 
+                      type="text"
+                      className="w-full p-1 border rounded"
+                      value={item.description}
+                      onChange={(e) => updateLabor(item.id, 'description', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.5"
+                      className="w-20 p-1 border rounded"
+                      value={item.hours || ''}
+                      onChange={(e) => updateLabor(item.id, 'hours', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input 
+                      type="number"
+                      step="0.01"
+                      className="w-20 p-1 border rounded"
+                      value={item.rate || ''}
+                      onChange={(e) => updateLabor(item.id, 'rate', e.target.value)}
+                    />
+                  </td>
+                  <td className="p-2 font-medium">
+                    ${item.total.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Totals */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <h2 className="text-xl font-semibold mb-4">Project Totals</h2>
+        <div className="grid grid-cols-2 gap-2 mb-6">
+          <div className="text-right font-medium">Materials:</div>
+          <div>${totals.materialTotal.toFixed(2)}</div>
+          
+          <div className="text-right font-medium">Labor:</div>
+          <div>${totals.laborTotal.toFixed(2)}</div>
+          
+          <div className="text-right font-medium">Subtotal:</div>
+          <div>${totals.subtotal.toFixed(2)}</div>
+          
+          <div className="text-right font-medium">Tax (8%):</div>
+          <div>${totals.tax.toFixed(2)}</div>
+          
+          <div className="text-right font-medium text-xl border-t pt-2">Total:</div>
+          <div className="text-xl font-bold border-t pt-2">${totals.total.toFixed(2)}</div>
+        </div>
+        
+        <div className="flex justify-end gap-2">
+          <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            Save Estimate
+          </button>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Export PDF
+          </button>
+        </div>
       </div>
     </div>
   );
